@@ -1,6 +1,10 @@
 import express, { Request, Response } from "express";
-import { findClientById, findUserById } from "./database";
-import { generateAccessToken, generateAuthCode, validateToken } from "./tokens";
+import { findClientById, findUserByEmail, findUserById } from "./database";
+import { generateAccessToken, generateAuthCode, generateAuthToken, validateToken } from "./tokens";
+import cookieParser from "cookie-parser"
+import fs from "fs"
+
+const LOGIN_PAGE = fs.readFileSync("public/login.html", "utf-8")
 
 const port: number = 3000;
 
@@ -8,8 +12,35 @@ const port: number = 3000;
 	// Create an Express application
 	const app = express();
 
+	app.use(cookieParser());
+
+	app.get("/login", (req, res) => {
+		const cookie = req.cookies["AUTH"] ?? ""
+
+		if (validateToken(cookie) !== null)
+			return res.redirect("/")
+		else if (cookie !== "")
+			res.clearCookie("AUTH") as never
+
+		res.send(LOGIN_PAGE)
+	})
+
+	app.post("/login", express.urlencoded(), (req, res) => {
+		const { email, password } = req.body
+
+		if (!email || !password)
+			return res.status(400).send({ error: 'Email or/and password missing as form data.' }) as never;
+
+		const user = findUserByEmail(email)
+
+		if (!user || user.password !== password)
+			return res.status(400).send({ error: 'Email or/and password is wrong.' }) as never;
+
+		res.cookie("AUTH", generateAuthToken(user.id)).redirect("/")
+	})
+
 	// Authorization Endpoint
-	app.get('/oauth/authorize', (req, res): void => {
+	app.get('/oauth/authorize', (req, res) => {
 		const { client_id, redirect_uri, state } = req.query;
 
 		if (!client_id || !redirect_uri)

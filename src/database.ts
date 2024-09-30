@@ -33,12 +33,26 @@ export const findClientById = (clientId: string): ClientModel | null => {
 }
 
 /**
- * Selects a single client by their id
+ * Selects a single user by their id
  * @param clientId the id to query for
  * @returns the user as {UserModel}
  */
 export const findUserById = (userId: string): UserModel | null => {
 	const row = database.prepare('SELECT * FROM users WHERE id = ?').get(userId) as UserModel | null;
+
+	if (!row)
+		return null
+
+	return { ...row, created_at: new Date(row.created_at) }
+}
+
+/**
+ * Selects a single user by their email
+ * @param email the email to query for
+ * @returns the user as {UserModel}
+ */
+export const findUserByEmail = (email: string): UserModel | null => {
+	const row = database.prepare('SELECT * FROM users WHERE email = ?').get(email) as UserModel | null;
 
 	if (!row)
 		return null

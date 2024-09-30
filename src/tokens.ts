@@ -25,6 +25,14 @@ export function generateAccessToken(clientId: string, userId: string): string {
 }
 
 /**
+ * Creates an auth token for the authentication page
+ * @returns the created token
+ */
+export function generateAuthToken(userId: string): string {
+	return jwt.sign({ userId }, SECRET_KEY, { expiresIn: '30d' });
+}
+
+/**
  * Checks whether or not the token was created by an authorized instance
  * @param token to check
  */
