@@ -1,4 +1,5 @@
 import express, { Request, Response } from "express";
+import { findClientById } from "./database";
 
 const port: number = 3000;
 
@@ -8,7 +9,7 @@ const port: number = 3000;
 
 	// Define a route for the root path ('/')
 	app.get('/', (req: Request, res: Response) => {
-		res.send('Hello, TypeScript + Node.js + Express!');
+		res.send("");
 	});
 
 	// Start the server and listen on the specified port
