@@ -10,17 +10,15 @@ const port: number = 3000;
 
 	// Authorization Endpoint
 	app.get('/oauth/authorize', (req, res): void => {
-		const { response_type, client_id, redirect_uri, state } = req.query;
+		const { client_id, redirect_uri, state } = req.query;
 
-		if (response_type !== 'code') {
-			return res.status(400).json({ error: 'Unsupported response_type' }) as never;
-		}
+		if (!client_id || !redirect_uri)
+			return res.status(400).send({ error: 'Query Parameters are missing. Please provide client_id and redirect_uri' }) as never
 
 		const client = findClientById(client_id as string);
-		if (client === null || client.redirect_uri !== (redirect_uri as string)) {
 
+		if (client === null || client.redirect_uri !== (redirect_uri as string))
 			return res.status(400).json({ error: 'Invalid client or redirect_uri' }) as never;
-		}
 
 		// TODO: validate user
 
@@ -28,7 +26,7 @@ const port: number = 3000;
 		const authCode = generateAuthCode(client.id, "user.id");
 
 		// Redirect back with code and state
-		const redirectWithCode = `${redirect_uri}?code=${authCode}&state=${state}`;
+		const redirectWithCode = `${client.redirect_uri}?code=${authCode}&state=${state}`;
 
 		return res.redirect(redirectWithCode);
 	});
