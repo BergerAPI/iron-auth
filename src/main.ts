@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
-import { findClientById } from "./database";
+import { findClientById, findUserById } from "./database";
+import { generateAccessToken, generateAuthCode, validateToken } from "./tokens";
 
 const port: number = 3000;
 
@@ -7,9 +8,59 @@ const port: number = 3000;
 	// Create an Express application
 	const app = express();
 
-	// Define a route for the root path ('/')
-	app.get('/', (req: Request, res: Response) => {
-		res.send("");
+	// Authorization Endpoint
+	app.get('/oauth/authorize', (req, res): void => {
+		const { response_type, client_id, redirect_uri, state } = req.query;
+
+		if (response_type !== 'code') {
+			return res.status(400).json({ error: 'Unsupported response_type' }) as never;
+		}
+
+		const client = findClientById(client_id as string);
+		if (client === null || client.redirect_uri !== (redirect_uri as string)) {
+
+			return res.status(400).json({ error: 'Invalid client or redirect_uri' }) as never;
+		}
+
+		// TODO: validate user
+
+		// Generate authorization code
+		const authCode = generateAuthCode(client.id, "user.id");
+
+		// Redirect back with code and state
+		const redirectWithCode = `${redirect_uri}?code=${authCode}&state=${state}`;
+
+		return res.redirect(redirectWithCode);
+	});
+
+	// Token Exchange Endpoint
+	app.post('/oauth/token', express.json(), (req: Request, res: Response) => {
+		const { grant_type, code, client_id, client_secret } = req.body;
+
+		if (grant_type !== 'authorization_code') {
+			return res.status(400).json({ error: 'Unsupported grant_type' }) as never;
+		}
+
+		const client = findClientById(client_id);
+
+		if (!client || client_secret !== client.secret) {
+			return res.status(400).json({ error: 'Invalid client credentials' }) as never;
+		}
+
+		// Here, we skip validating the code (should be done with a DB lookup)
+		try {
+			const decoded = validateToken(code);
+
+			if (decoded === null || decoded.clientId !== client_id)
+				return res.status(400).json({ error: 'Invalid authorization code' }) as never;
+
+			// Generate access token
+			const accessToken = generateAccessToken(client_id, decoded.userId);
+
+			return res.json({ access_token: accessToken, token_type: 'Bearer', expires_in: 3600 }) as never;
+		} catch (err) {
+			return res.status(400).json({ error: 'Invalid authorization code' }) as never;
+		}
 	});
 
 	// Start the server and listen on the specified port
