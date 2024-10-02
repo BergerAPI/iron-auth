@@ -2,8 +2,12 @@ import jwt from "jsonwebtoken"
 
 const SECRET_KEY = 'your_secret_key';  // Store this securely in production!
 
-interface TokenPayload {
+export interface TokenPayload {
 	clientId: string
+	userId: string
+}
+
+export interface AuthTokenPayload {
 	userId: string
 }
 
@@ -13,7 +17,7 @@ interface TokenPayload {
  */
 export function generateAuthCode(clientId: string, userId: string): string {
 	// In real implementation, store this in DB with expiration
-	return jwt.sign({ clientId, userId } as TokenPayload, SECRET_KEY, { expiresIn: '2m' });
+	return jwt.sign({ clientId, userId } as TokenPayload, SECRET_KEY, { expiresIn: '10m' });
 }
 
 /**
@@ -36,9 +40,9 @@ export function generateAuthToken(userId: string): string {
  * Checks whether or not the token was created by an authorized instance
  * @param token to check
  */
-export function validateToken(token: string): TokenPayload | null {
+export function validateToken<T extends AuthTokenPayload | TokenPayload>(token: string): T | null {
 	try {
-		return jwt.verify(token, SECRET_KEY) as TokenPayload;
+		return jwt.verify(token, SECRET_KEY) as T;
 	} catch (e) {
 		return null;
 	}

@@ -1,12 +1,13 @@
 import express, { Request, Response } from "express";
 import { findClientById, findUserByEmail, findUserById } from "./database";
-import { generateAccessToken, generateAuthCode, generateAuthToken, validateToken } from "./tokens";
+import { AuthTokenPayload, generateAccessToken, generateAuthCode, generateAuthToken, TokenPayload, validateToken } from "./tokens";
 import cookieParser from "cookie-parser"
 import fs from "fs"
 
-const LOGIN_PAGE = fs.readFileSync("public/login.html", "utf-8")
+const LOGIN_PAGE = fs.readFileSync("public/login.html", "utf-8");
 
 const port: number = 3000;
+const authCookie = "auth";
 
 (async () => {
 	// Create an Express application
@@ -17,10 +18,10 @@ const port: number = 3000;
 	app.get("/login", (req, res) => {
 		const cookie = req.cookies["AUTH"] ?? ""
 
-		if (validateToken(cookie) !== null)
+		if (validateToken<AuthTokenPayload>(cookie) !== null)
 			return res.redirect("/")
 		else if (cookie !== "")
-			res.clearCookie("AUTH") as never
+			res.clearCookie("AUTH")
 
 		res.send(LOGIN_PAGE)
 	})
@@ -36,7 +37,20 @@ const port: number = 3000;
 		if (!user || user.password !== password)
 			return res.status(400).send({ error: 'Email or/and password is wrong.' }) as never;
 
-		res.cookie("AUTH", generateAuthToken(user.id)).redirect("/")
+		res.cookie(authCookie, generateAuthToken(user.id))
+
+		// Checking for an existing session
+		const sessionCookie = req.cookies["session"]
+
+		if (!sessionCookie)
+			return res.redirect("/")
+
+		const session = JSON.parse(sessionCookie)
+
+		if (!session.client_id || !session.redirect_uri)
+			return res.redirect("/")
+
+		res.redirect(`/oauth/authorize?redirect_uri=${session.redirect_uri}&client_id=${session.client_id}&state=${session.state ?? ''}`)
 	})
 
 	// Authorization Endpoint
@@ -51,7 +65,17 @@ const port: number = 3000;
 		if (client === null || client.redirect_uri !== (redirect_uri as string))
 			return res.status(400).json({ error: 'Invalid client or redirect_uri' }) as never;
 
-		// TODO: validate user
+		// Validating the user
+		const cookie = req.cookies[authCookie] ?? ""
+
+		if (validateToken<AuthTokenPayload>(cookie) === null) {
+			if (cookie !== "")
+				res.clearCookie(authCookie)
+
+			res.cookie("session", JSON.stringify({ client_id, redirect_uri, state }))
+
+			return res.redirect("/login")
+		}
 
 		// Generate authorization code
 		const authCode = generateAuthCode(client.id, "user.id");
@@ -78,7 +102,7 @@ const port: number = 3000;
 
 		// Here, we skip validating the code (should be done with a DB lookup)
 		try {
-			const decoded = validateToken(code);
+			const decoded = validateToken<TokenPayload>(code);
 
 			if (decoded === null || decoded.clientId !== client_id)
 				return res.status(400).json({ error: 'Invalid authorization code' }) as never;
