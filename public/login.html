@@ -9,8 +9,10 @@
 
 <body>
 <form action="/login" method="post">
-	{{if eq .Success "false" }}
-		<p>Something went wrong.</p>
+	{{if eq .Status "isr" }}
+	<p>Internal Server Error: Something went wrong on our site. Please stand by, and inform an administrator if possible. Thank you.</p>
+	{{else if eq .Status "br"}}
+	<p>Your email or password is wrong. Please try again.</p>
 	{{end}}
 
 	<label>

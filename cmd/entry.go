@@ -24,13 +24,13 @@ func main() {
 		clientId := ctx.Query("client_id", "")
 		redirectUri := ctx.Query("redirect_uri", "")
 		state := ctx.Query("state", "")
-		success := ctx.Query("success", "true")
+		status := ctx.Query("status", "true")
 
 		return ctx.Render("login", fiber.Map{
 			"ClientId":    clientId,
 			"RedirectUri": redirectUri,
 			"State":       state,
-			"Success":     success,
+			"Status":      status,
 		})
 	})
 
@@ -46,7 +46,7 @@ func main() {
 		state := ctx.FormValue("state", "")
 
 		if email != "test@niclas.lol" && password != "test123" {
-			return ctx.Redirect("/login?success=false&client_id=" + clientId + "&redirect_uri=" + redirectUri + "&state=" + state)
+			return ctx.Redirect("/login?status=br&client_id=" + clientId + "&redirect_uri=" + redirectUri + "&state=" + state)
 		}
 
 		// Token and cookie shall become invalid or be removed in 30 days from now
@@ -63,7 +63,7 @@ func main() {
 		tokenString, err := token.SignedString([]byte("this-needs-to-be-replaced"))
 
 		if err != nil {
-			return ctx.Redirect("/login?success=false&client_id=" + clientId + "&redirect_uri=" + redirectUri + "&state=" + state)
+			return ctx.Redirect("/login?status=isr&client_id=" + clientId + "&redirect_uri=" + redirectUri + "&state=" + state)
 		}
 
 		// Create and set the cookie for storing the session
