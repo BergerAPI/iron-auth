@@ -9,6 +9,10 @@
 
 <body>
 <form action="/login" method="post">
+	{{if eq .Success "false" }}
+		<p>Something went wrong.</p>
+	{{end}}
+
 	<label>
 		Email
 		<input name="email" placeholder="Email" />
@@ -16,6 +20,16 @@
 	<label>
 		Password
 		<input name="password" placeholder="Password" />
+	</label>
+
+	<label>
+		<input hidden="hidden" name="client_id" value="{{.ClientId}}" />
+	</label>
+	<label>
+		<input hidden="hidden" name="redirect_uri" value="{{.RedirectUri}}" />
+	</label>
+	<label>
+		<input hidden="hidden" name="state" value="{{.State}}" />
 	</label>
 
 	<button type="submit">Login</button>
