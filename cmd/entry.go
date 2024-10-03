@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/BergerAPI/iron-auth/database"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/template/html/v2"
 	"github.com/golang-jwt/jwt/v5"
@@ -15,6 +16,9 @@ func main() {
 	app := fiber.New(fiber.Config{
 		Views: engine,
 	})
+
+	// Construct a connection to a sqlite database (temporarily a file)
+	database.Init("file:db.sqlite")
 
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		return ctx.SendString("Hello World!")
