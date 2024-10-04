@@ -74,5 +74,9 @@ func LoginAction(ctx *fiber.Ctx) error {
 	cookie.Expires = expiration
 	ctx.Cookie(cookie)
 
+	if redirectUri != "" && clientId != "" {
+		return ctx.Redirect("/oauth/authorize?response_type=code&client_id=" + clientId + "&redirect_uri=" + redirectUri + "&state=" + state)
+	}
+
 	return ctx.Redirect("/")
 }
