@@ -27,6 +27,7 @@ func main() {
 
 	app.Get("/login", middleware.AttemptAuthentication, routes.LoginPage)
 	app.Post("/login", middleware.AttemptAuthentication, routes.LoginAction)
+	app.Get("/oauth/authorize", middleware.AttemptAuthentication, routes.Authorize)
 
 	err := app.Listen(":3000")
 	if err == nil {
