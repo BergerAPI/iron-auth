@@ -1,10 +1,13 @@
 package main
 
 import (
+	"github.com/BergerAPI/iron-auth"
 	"github.com/BergerAPI/iron-auth/database"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/template/html/v2"
 	"github.com/golang-jwt/jwt/v5"
+	_ "github.com/joho/godotenv/autoload"
+	"os"
 	"time"
 )
 
@@ -24,11 +27,16 @@ func main() {
 		return ctx.SendString("Hello World!")
 	})
 
-	app.Get("/login", func(ctx *fiber.Ctx) error {
+	app.Get("/login", middleware.AttemptAuthentication, func(ctx *fiber.Ctx) error {
 		clientId := ctx.Query("client_id", "")
 		redirectUri := ctx.Query("redirect_uri", "")
 		state := ctx.Query("state", "")
-		status := ctx.Query("status", "true")
+		status := ctx.Query("status", "")
+
+		// Checking if the user is logged in; if they are, redirect them away from the login page
+		if _, ok := ctx.Locals("user").(string); ok {
+			return ctx.Redirect("/")
+		}
 
 		return ctx.Render("login", fiber.Map{
 			"ClientId":    clientId,
@@ -49,7 +57,8 @@ func main() {
 		redirectUri := ctx.FormValue("redirect_uri", "")
 		state := ctx.FormValue("state", "")
 
-		if email != "test@niclas.lol" && password != "test123" {
+		var user database.User
+		if result := database.Instance.Model(database.User{}).First(&user, "email = ?", email); result.Error != nil || user.Password != password {
 			return ctx.Redirect("/login?status=br&client_id=" + clientId + "&redirect_uri=" + redirectUri + "&state=" + state)
 		}
 
@@ -59,12 +68,14 @@ func main() {
 		// Create a new token object, specifying signing method and the claims
 		// you would like it to contain.
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"userId": "foobar",
-			"exp":    expiration.Unix(),
+			"iss": "auth.iron.sh",
+			"aud": "iron.sh",
+			"id":  user.Id,
+			"exp": expiration.Unix(),
 		})
 
 		// Sign and get the complete encoded token as a string using the secret
-		tokenString, err := token.SignedString([]byte("this-needs-to-be-replaced"))
+		tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 
 		if err != nil {
 			return ctx.Redirect("/login?status=isr&client_id=" + clientId + "&redirect_uri=" + redirectUri + "&state=" + state)
@@ -72,7 +83,7 @@ func main() {
 
 		// Create and set the cookie for storing the session
 		cookie := new(fiber.Cookie)
-		cookie.Name = "auth"
+		cookie.Name = os.Getenv("AUTH_COOKIE")
 		cookie.Value = tokenString
 		cookie.Expires = expiration
 		ctx.Cookie(cookie)
