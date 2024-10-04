@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/BergerAPI/iron-auth"
 	"github.com/BergerAPI/iron-auth/database"
 	"github.com/BergerAPI/iron-auth/routes"
+	"github.com/BergerAPI/iron-auth/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/template/html/v2"
 	_ "github.com/joho/godotenv/autoload"
@@ -25,9 +25,9 @@ func main() {
 		return ctx.SendString("Hello World!")
 	})
 
-	app.Get("/login", middleware.AttemptAuthentication, routes.LoginPage)
-	app.Post("/login", middleware.AttemptAuthentication, routes.LoginAction)
-	app.Get("/oauth/authorize", middleware.AttemptAuthentication, routes.Authorize)
+	app.Get("/login", utils.AttemptAuthentication, routes.LoginPage)
+	app.Post("/login", utils.AttemptAuthentication, routes.LoginAction)
+	app.Get("/oauth/authorize", utils.AttemptAuthentication, routes.Authorize)
 
 	err := app.Listen(":3000")
 	if err == nil {

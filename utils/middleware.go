@@ -1,4 +1,4 @@
-package middleware
+package utils
 
 import (
 	"fmt"
@@ -8,8 +8,7 @@ import (
 	"time"
 )
 
-// AttemptAuthentication
-// This will attempt to authorize
+// AttemptAuthentication This will attempt to authorize
 func AttemptAuthentication(ctx *fiber.Ctx) error {
 	cookieToken := ctx.Cookies(os.Getenv("AUTH_COOKIE"), "")
 

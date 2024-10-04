@@ -2,11 +2,27 @@ package routes
 
 import (
 	"github.com/BergerAPI/iron-auth/database"
+	"github.com/BergerAPI/iron-auth/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"os"
 	"time"
 )
+
+func constructLoginError(error string, clientId string, redirectUri string, state string) string {
+	uri, err := utils.CreateURL("/login", map[string]string{
+		"error":        error,
+		"client_id":    clientId,
+		"redirect_uri": redirectUri,
+		"state":        state,
+	})
+
+	if err == nil {
+		return "/"
+	}
+
+	return uri
+}
 
 func LoginPage(ctx *fiber.Ctx) error {
 	clientId := ctx.Query("client_id", "")
@@ -45,7 +61,7 @@ func LoginAction(ctx *fiber.Ctx) error {
 
 	var user database.User
 	if result := database.Instance.Model(database.User{}).First(&user, "email = ?", email); result.Error != nil || user.Password != password {
-		return ctx.Redirect("/login?status=br&client_id=" + clientId + "&redirect_uri=" + redirectUri + "&state=" + state)
+		return ctx.Redirect(constructLoginError("br", clientId, redirectUri, state))
 	}
 
 	// Token and cookie shall become invalid or be removed in 30 days from now
@@ -64,7 +80,7 @@ func LoginAction(ctx *fiber.Ctx) error {
 	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 
 	if err != nil {
-		return ctx.Redirect("/login?status=isr&client_id=" + clientId + "&redirect_uri=" + redirectUri + "&state=" + state)
+		return ctx.Redirect(constructLoginError("ist", clientId, redirectUri, state))
 	}
 
 	// Create and set the cookie for storing the session
@@ -75,7 +91,16 @@ func LoginAction(ctx *fiber.Ctx) error {
 	ctx.Cookie(cookie)
 
 	if redirectUri != "" && clientId != "" {
-		return ctx.Redirect("/oauth/authorize?response_type=code&client_id=" + clientId + "&redirect_uri=" + redirectUri + "&state=" + state)
+		uri, err := utils.CreateURL("/oauth/authorize", map[string]string{
+			"client_id":     clientId,
+			"redirect_uri":  redirectUri,
+			"state":         state,
+			"response_type": "code",
+		})
+
+		if err == nil {
+			return ctx.Redirect(uri)
+		}
 	}
 
 	return ctx.Redirect("/")

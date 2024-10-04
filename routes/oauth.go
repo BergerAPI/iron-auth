@@ -2,37 +2,15 @@ package routes
 
 import (
 	"github.com/BergerAPI/iron-auth/database"
+	"github.com/BergerAPI/iron-auth/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"net/url"
 	"os"
 )
 
-// createURL dynamically generates a URL with encoded query parameters
-func createURL(baseURL string, params map[string]string) (string, error) {
-	// Parse the base URL
-	parsedURL, err := url.Parse(baseURL)
-	if err != nil {
-		return "", err
-	}
-
-	// Initialize query parameters
-	query := url.Values{}
-
-	// Add each query parameter to the URL
-	for key, value := range params {
-		query.Add(key, value)
-	}
-
-	// Encode the parameters and append them to the URL
-	parsedURL.RawQuery = query.Encode()
-
-	// Return the full URL as a string
-	return parsedURL.String(), nil
-}
-
 func constructError(redirectUri string, error string, state string) string {
-	uri, err := createURL(redirectUri, map[string]string{
+	uri, err := utils.CreateURL(redirectUri, map[string]string{
 		"error": error,
 		"state": state,
 	})
@@ -45,7 +23,7 @@ func constructError(redirectUri string, error string, state string) string {
 }
 
 func constructLogin(clientId string, redirectUri string, state string) string {
-	uri, err := createURL("/login", map[string]string{
+	uri, err := utils.CreateURL("/login", map[string]string{
 		"client_id":    clientId,
 		"redirect_uri": redirectUri,
 		"state":        state,
@@ -123,7 +101,7 @@ func Authorize(ctx *fiber.Ctx) error {
 		return ctx.Redirect(constructError(redirectUri, "server_error", state))
 	}
 
-	successUrl, err := createURL(redirectUri, map[string]string{
+	successUrl, err := utils.CreateURL(redirectUri, map[string]string{
 		"code":  code,
 		"state": state,
 	})
