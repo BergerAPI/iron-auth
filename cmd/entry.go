@@ -28,6 +28,7 @@ func main() {
 	app.Get("/login", utils.AttemptAuthentication, routes.LoginPage)
 	app.Post("/login", utils.AttemptAuthentication, routes.LoginAction)
 	app.Get("/oauth/authorize", utils.AttemptAuthentication, routes.Authorize)
+	app.Get("/oauth/token", routes.Token)
 
 	err := app.Listen(":3000")
 	if err == nil {

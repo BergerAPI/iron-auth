@@ -7,6 +7,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"net/url"
 	"os"
+	"time"
 )
 
 func constructError(redirectUri string, error string, state string) string {
@@ -49,6 +50,7 @@ func Authorize(ctx *fiber.Ctx) error {
 		return ctx.Redirect(constructLogin(clientId, redirectUri, state))
 	}
 
+	// Validating the user account
 	var user database.User
 	if result := database.Instance.Model(database.User{}).First(&user, "id = ?", userId); result.Error != nil {
 		ctx.ClearCookie(os.Getenv("AUTH_COOKIE"))
@@ -111,4 +113,68 @@ func Authorize(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.Redirect(successUrl)
+}
+
+func Token(ctx *fiber.Ctx) error {
+	clientId := ctx.Query("client_id", "")
+	code := ctx.Query("code", "")
+	grantType := ctx.Query("grant_type", "")
+	redirectUri := ctx.Query("redirect_uri", "")
+	clientSecret := ctx.Query("client_secret", "")
+
+	// [RFC6749] 4.1.3 grant_type REQUIRED; code REQUIRED;
+	// redirect_uri REQUIRED; client_id REQUIRED;
+	if clientId == "" || redirectUri == "" || code == "" || grantType == "" || clientSecret == "" {
+		return ctx.JSON(fiber.Map{"error": "invalid_request"})
+	}
+
+	// [RFC6749] 3.1.2 The redirection endpoint URI MUST be an absolute URI
+	if _, err := url.ParseRequestURI(redirectUri); err != nil {
+		return ctx.JSON(fiber.Map{"error": "invalid_request"})
+	}
+
+	// [RFC6749] 4.1.3 Value MUST be set to "authorization_code"
+	if grantType != "authorization_code" {
+		return ctx.JSON(fiber.Map{"error": "unsupported_grant_type"})
+	}
+
+	// Requesting further information about the client
+	var client database.Client
+	if result := database.Instance.Model(database.Client{}).First(&client, "id = ?", clientId); result.Error != nil {
+		return ctx.JSON(fiber.Map{"error": "unauthorized_client"})
+	}
+
+	if client.RedirectUri != redirectUri {
+		return ctx.JSON(fiber.Map{"error": "invalid_request"})
+	}
+
+	// TODO: check if token has been created
+
+	if client.Secret != clientSecret {
+		return ctx.JSON(fiber.Map{"error": "access_denied"})
+	}
+
+	expiresIn := 30 * 24 * time.Hour
+
+	// Creating the code used for requesting the access token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"iss":       "auth.iron.sh",
+		"aud":       "iron.sh",
+		"exp":       time.Now().Add(expiresIn).Unix(),
+		"client_id": client.Id,
+		"user_id":   "",
+	})
+
+	// Sign and get the complete encoded token as a string using the secret
+	code, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+
+	if err != nil {
+		return ctx.JSON(fiber.Map{"error": "server_error"})
+	}
+
+	return ctx.JSON(fiber.Map{
+		"access_token": code,
+		"token_type":   "bearer",
+		"expires_in":   expiresIn,
+	})
 }
