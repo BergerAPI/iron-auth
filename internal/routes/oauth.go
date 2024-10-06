@@ -112,6 +112,14 @@ func Authorize(ctx *fiber.Ctx) error {
 		return ctx.Redirect(constructError(redirectUri, "server_error", state))
 	}
 
+	// Creating a database entry
+	databaseCode := database.AuthorizationCode{Code: code,
+		CreatedAt: time.Now(), ClientId: client.Id, UserId: user.Id, ExpiresIn: int(time.Minute * 10)}
+
+	if result := database.Instance.Create(&databaseCode); result.Error != nil {
+		return ctx.Redirect(constructError(redirectUri, "server_error", state))
+	}
+
 	return ctx.Redirect(successUrl)
 }
 
@@ -148,10 +156,20 @@ func Token(ctx *fiber.Ctx) error {
 		return ctx.JSON(fiber.Map{"error": "invalid_request"})
 	}
 
-	// TODO: check if token has been created
-
 	if client.Secret != clientSecret {
 		return ctx.JSON(fiber.Map{"error": "access_denied"})
+	}
+
+	// Check if token has been created
+	var databaseCode database.AuthorizationCode
+	if result := database.Instance.Model(database.AuthorizationCode{}).First(&databaseCode, "code = ?", code); result.Error != nil {
+		return ctx.JSON(fiber.Map{"error": "invalid_client"})
+	}
+
+	// Checking if the code is expired
+	if databaseCode.CreatedAt.Add(time.Duration(databaseCode.ExpiresIn)).Unix() < time.Now().Unix() {
+		database.Instance.Delete(&databaseCode)
+		return ctx.JSON(fiber.Map{"error": "invalid_client"})
 	}
 
 	expiresIn := 30 * 24 * time.Hour
@@ -162,7 +180,7 @@ func Token(ctx *fiber.Ctx) error {
 		"aud":       "iron.sh",
 		"exp":       time.Now().Add(expiresIn).Unix(),
 		"client_id": client.Id,
-		"user_id":   "",
+		"user_id":   databaseCode.UserId,
 	})
 
 	// Sign and get the complete encoded token as a string using the secret
@@ -171,6 +189,9 @@ func Token(ctx *fiber.Ctx) error {
 	if err != nil {
 		return ctx.JSON(fiber.Map{"error": "server_error"})
 	}
+
+	// Token now has been used, so we can delete it
+	database.Instance.Delete(&databaseCode)
 
 	return ctx.JSON(fiber.Map{
 		"access_token": code,

@@ -19,6 +19,7 @@ func Init(url string) {
 
 	_ = db.AutoMigrate(&User{})
 	_ = db.AutoMigrate(&Client{})
+	_ = db.AutoMigrate(&AuthorizationCode{})
 
 	Instance = db
 }

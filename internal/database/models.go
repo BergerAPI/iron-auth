@@ -16,3 +16,11 @@ type Client struct {
 	Secret      string
 	CreatedAt   time.Time
 }
+
+type AuthorizationCode struct {
+	Code      string `gorm:"primaryKey"`
+	ExpiresIn int
+	ClientId  string
+	UserId    string
+	CreatedAt time.Time
+}
