@@ -80,7 +80,7 @@ func LoginAction(ctx *fiber.Ctx) error {
 	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 
 	if err != nil {
-		return ctx.Redirect(constructLoginError("ist", clientId, redirectUri, state))
+		return ctx.Redirect(constructLoginError("ise", clientId, redirectUri, state))
 	}
 
 	// Create and set the cookie for storing the session
