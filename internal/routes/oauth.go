@@ -1,7 +1,7 @@
 package routes
 
 import (
-	database2 "github.com/BergerAPI/iron-auth/internal/database"
+	"github.com/BergerAPI/iron-auth/internal/database"
 	"github.com/BergerAPI/iron-auth/internal/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
@@ -51,8 +51,8 @@ func Authorize(ctx *fiber.Ctx) error {
 	}
 
 	// Validating the user account
-	var user database2.User
-	if result := database2.Instance.Model(database2.User{}).First(&user, "id = ?", userId); result.Error != nil {
+	var user database.User
+	if result := database.Instance.Model(database.User{}).First(&user, "id = ?", userId); result.Error != nil {
 		ctx.ClearCookie(os.Getenv("AUTH_COOKIE"))
 		return ctx.Redirect(constructLogin(clientId, redirectUri, state))
 	}
@@ -79,8 +79,8 @@ func Authorize(ctx *fiber.Ctx) error {
 	}
 
 	// Requesting further information about the client
-	var client database2.Client
-	if result := database2.Instance.Model(database2.Client{}).First(&client, "id = ?", clientId); result.Error != nil {
+	var client database.Client
+	if result := database.Instance.Model(database.Client{}).First(&client, "id = ?", clientId); result.Error != nil {
 		return ctx.Redirect(constructError(redirectUri, "unauthorized_client", state))
 	}
 
@@ -139,8 +139,8 @@ func Token(ctx *fiber.Ctx) error {
 	}
 
 	// Requesting further information about the client
-	var client database2.Client
-	if result := database2.Instance.Model(database2.Client{}).First(&client, "id = ?", clientId); result.Error != nil {
+	var client database.Client
+	if result := database.Instance.Model(database.Client{}).First(&client, "id = ?", clientId); result.Error != nil {
 		return ctx.JSON(fiber.Map{"error": "unauthorized_client"})
 	}
 
