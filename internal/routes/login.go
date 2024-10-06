@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"github.com/BergerAPI/iron-auth/database"
-	"github.com/BergerAPI/iron-auth/utils"
+	database2 "github.com/BergerAPI/iron-auth/internal/database"
+	"github.com/BergerAPI/iron-auth/internal/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"os"
@@ -59,8 +59,8 @@ func LoginAction(ctx *fiber.Ctx) error {
 		return ctx.Redirect("/")
 	}
 
-	var user database.User
-	if result := database.Instance.Model(database.User{}).First(&user, "email = ?", email); result.Error != nil || user.Password != password {
+	var user database2.User
+	if result := database2.Instance.Model(database2.User{}).First(&user, "email = ?", email); result.Error != nil || user.Password != password {
 		return ctx.Redirect(constructLoginError("br", clientId, redirectUri, state))
 	}
 
