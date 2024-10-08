@@ -5,6 +5,7 @@ import (
 	"github.com/BergerAPI/iron-auth/internal/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 	"os"
 	"time"
 )
@@ -60,7 +61,12 @@ func LoginAction(ctx *fiber.Ctx) error {
 	}
 
 	var user database.User
-	if result := database.Instance.Model(database.User{}).First(&user, "email = ?", email); result.Error != nil || user.Password != password {
+	if result := database.Instance.Model(database.User{}).First(&user, "email = ?", email); result.Error != nil {
+		return ctx.Redirect(constructLoginError("br", clientId, redirectUri, state))
+	}
+
+	// Comparing the password hash with the database-password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
 		return ctx.Redirect(constructLoginError("br", clientId, redirectUri, state))
 	}
 
