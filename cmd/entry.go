@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/template/html/v2"
 	_ "github.com/joho/godotenv/autoload"
+	"os"
 )
 
 func main() {
@@ -19,7 +20,7 @@ func main() {
 	})
 
 	// Construct a connection to a sqlite database (temporarily a file)
-	database.Init("file:db.sqlite")
+	database.Init(os.Getenv("DB_URL"))
 
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		return ctx.SendString("Hello World!")
